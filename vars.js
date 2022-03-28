@@ -23,6 +23,19 @@ module.exports = {
     arguementErrorMinutesInvalid: "Minutes must be between 1 and 1440",
     arguementErrorMaxCountInvalid: "Max count must be between 1 and 288",
     arguementErrorSerialNumberNullEmpty: "Serial number null or empty",
+    // Trend Keys:
+    dexcomTrendKeys: {
+        "None": 0,
+        "DoubleUp": 1,
+        "SingleUp": 2,
+        "FortyFiveUp": 3,
+        "Flat": 4,
+        "FortyFiveDown": 5,
+        "SingleDown": 6,
+        "DoubleDown": 7,
+        "NotComputable": 8,
+        "RateOutOfRange": 9,
+    },
     // Trend descriptions:
     dexcomTrendDescriptions: [
         "",

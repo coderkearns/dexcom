@@ -3,8 +3,31 @@ const axios = require('axios');
 
 class GlucoseReading {
     constructor(reading) {
-        this.reading = reading;
-        console.log(reading)
+        this._reading = reading;
+
+        this.value = reading.Value;
+
+        this._trend = reading.Trend;
+        this._trendKey = vars.dexcomTrendKeys[this._trend];
+        this.trendDescription = vars.dexcomTrendDescriptions[this._trendKey];
+        this.trendArrow = vars.dexcomTrendArrows[this._trendKey];
+
+        this.time = new Date(parseInt(reading.WT.replace("Date(", "").replace(")", "")));
+    }
+
+    get mgDl() {
+        return this.value;
+    }
+
+    get mmolL() {
+        return Math.round(this.value * vars.mmolLConvertionFactor, 1);
+    }
+
+    get trend() {
+        return {
+            description: this.trendDescription,
+            arrows: this.trendArrow,
+        }
     }
 }
 
@@ -17,7 +40,6 @@ class Dexcom {
         this.password = password;
         this.ous = ous;
         this.sessionId = null;
-        this.create_session()
         this.axios = axios.create({
             baseURL: ous ? vars.dexcomBaseUrlOus : vars.dexcomBaseUrl,
             headers: {
@@ -26,6 +48,7 @@ class Dexcom {
             }
         });
 
+        this.ready = this.create_session()
     }
 
     _check_session_id() {
@@ -55,14 +78,16 @@ class Dexcom {
         try {
             let data = await this._request(vars.dexcomAuthenticateEndpoint, 'post', postData)
             data = await this._request(vars.dexcomLoginEndpoint, 'post', postData)
+            this.sessionId = data.data
+            return
         } catch (e) {
             console.error(e)
             throw new Error('Failed to create session');
         }
-        return data
     }
 
     async getGlucoseReadings(minutes=1440, maxCount=288) {
+        this._check_session_id()
         if (minutes > 1440 || minutes < 1) {
             throw new Error('Minutes must be between 1 and 1440');
         }
@@ -76,7 +101,7 @@ class Dexcom {
         }
         try {
             let data = await this._request(vars.dexcomGlucoseReadingsEndpoint, 'post', postData)
-            let readings = data.data.readings.map(reading => new GlucoseReading(reading))
+            let readings = data.data.map(reading => new GlucoseReading(reading))
             return readings
         } catch (e) {
             console.error(e)
