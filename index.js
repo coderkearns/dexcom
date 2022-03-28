@@ -40,13 +40,12 @@ class Dexcom {
         this.password = password;
         this.ous = ous;
         this.sessionId = null;
-        this.axios = axios.create({
-            baseURL: ous ? vars.dexcomBaseUrlOus : vars.dexcomBaseUrl,
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        });
+
+        this._baseUrl = ous ? vars.dexcomOusBaseUrl : vars.dexcomBaseUrl;
+        this._baseHeaders = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        }
 
         this.ready = this.create_session()
     }
@@ -61,11 +60,11 @@ class Dexcom {
     }
 
     _request(url, method='get', data=null) {
-        return this.axios.request({
+        return fetch(this._baseUrl + url, {
             method: method,
-            url: url,
-            data: data
-        })
+            headers: this._baseHeaders,
+            body: data ? JSON.stringify(data) : null,
+        }).then(response => response.json())
     }
 
     async create_session() {
@@ -78,7 +77,7 @@ class Dexcom {
         try {
             let data = await this._request(vars.dexcomAuthenticateEndpoint, 'post', postData)
             data = await this._request(vars.dexcomLoginEndpoint, 'post', postData)
-            this.sessionId = data.data
+            this.sessionId = data
             return
         } catch (e) {
             console.error(e)
@@ -101,7 +100,7 @@ class Dexcom {
         }
         try {
             let data = await this._request(vars.dexcomGlucoseReadingsEndpoint, 'post', postData)
-            let readings = data.data.map(reading => new GlucoseReading(reading))
+            let readings = data.map(reading => new GlucoseReading(reading))
             return readings
         } catch (e) {
             console.error(e)
