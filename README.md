@@ -79,7 +79,7 @@ const current = await dexcom.getCurrentGlucoseReading(); // Assuming Reading is 
 
 const glucose = current.value; // 119
 const glucoseMgDl = current.mgdl // 119
-const glucoseMmolL = current.mmol // 6.8
+const glucoseMmolL = current.mmol // 6.6
 
 const trendDesc = current.trend.description; // "steady"
 const trendArrow = current.trend.arrows; // "→"
