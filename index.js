@@ -70,11 +70,11 @@ class GlucoseReading {
         this.time = new Date(parseInt(reading.WT.replace("Date(", "").replace(")", "")));
     }
 
-    get mgDl() {
+    get mgdl() {
         return this.value;
     }
 
-    get mmolL() {
+    get mmoL() {
         return Math.round(this.value * vars.mmolLConvertionFactor, 1);
     }
 
