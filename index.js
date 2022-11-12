@@ -3,7 +3,7 @@ const vars = {
     dexcomBaseUrl: "https://share2.dexcom.com/ShareWebServices/Services",
     dexcomBaseUrlOus: "https://shareous1.dexcom.com/ShareWebServices/Services",
     // Endpoints:
-    dexcomLoginEndpoint: "/General/LoginPublisherAccountByName",
+    dexcomLoginEndpoint: "/General/LoginPublisherAccountById",
     dexcomAuthenticateEndpoint: "/General/AuthenticatePublisherAccount",
     dexcomVerifySerialNumberEndpoint:
         "/Publisher/CheckMonitoredReceiverAssignmentStatus",
@@ -132,9 +132,13 @@ class Dexcom {
         }
 
         try {
-            let data = await this._request(vars.dexcomAuthenticateEndpoint, 'post', postData)
-            data = await this._request(vars.dexcomLoginEndpoint, 'post', postData)
-            this.sessionId = data
+            let accountId = await this._request(vars.dexcomAuthenticateEndpoint, 'post', postData);
+            let sessionId = await this._request(vars.dexcomLoginEndpoint, 'post', {
+                accountId,
+                password: this.password,
+                applicationId: vars.dexcomApplicationId
+            });
+            this.sessionId = sessionId;
             return
         } catch (e) {
             console.error(e)
