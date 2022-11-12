@@ -89,3 +89,7 @@ const timestamp = current.time; // Date(2000, 0, 1, 10, 0, 0, 0);
 // Need to access the Reading JSON itself? np
 const reading = current._reading; // { Trend: 'Flat', Value: 119, WT: '<date string>', ST: '<date string>', DT: '<date string>' }
 ```
+
+## LICENSE
+
+[MIT](https://choosealicense.com/licenses/mit/)
