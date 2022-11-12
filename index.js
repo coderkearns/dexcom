@@ -98,7 +98,7 @@ class Dexcom {
         this.ous = ous;
         this.sessionId = null;
 
-        this._baseUrl = ous ? vars.dexcomOusBaseUrl : vars.dexcomBaseUrl;
+        this._baseUrl = ous ? vars.dexcomBaseUrlOus : vars.dexcomBaseUrl;
         this._baseHeaders = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
