@@ -1,197 +1,146 @@
-const vars = {
-    // Urls:
-    dexcomBaseUrl: "https://share2.dexcom.com/ShareWebServices/Services",
-    dexcomBaseUrlOus: "https://shareous1.dexcom.com/ShareWebServices/Services",
-    // Endpoints:
-    dexcomLoginEndpoint: "/General/LoginPublisherAccountById",
-    dexcomAuthenticateEndpoint: "/General/AuthenticatePublisherAccount",
-    dexcomVerifySerialNumberEndpoint:
-        "/Publisher/CheckMonitoredReceiverAssignmentStatus",
-    dexcomGlucoseReadingsEndpoint: "/Publisher/ReadPublisherLatestGlucoseValues",
-    // Application ID:
-    dexcomApplicationId: "d89443d2-327c-4a6f-89e5-496bbb0317db",
-    // Error messages:
-    accountErrorUsernameNullEmpty: "Username null or empty",
-    accountErrorPasswordNullEmpty: "Password null or empty",
-    accountErrorAccountNotFound: "Account not found",
-    accountErrorPasswordInvalid: "Password not valid",
-    accountErrorUnknown: "Account error",
-    sessionErrorSessionIdNull: "Session ID null",
-    sessionErrorSessionIdDefault: "Session ID default",
-    sessionErrorSessionNotValid: "Session ID not valid",
-    sessionErrorSessionNotFound: "Session ID not found",
-    arguementErrorMinutesInvalid: "Minutes must be between 1 and 1440",
-    arguementErrorMaxCountInvalid: "Max count must be between 1 and 288",
-    arguementErrorSerialNumberNullEmpty: "Serial number null or empty",
-    // Trend Keys:
-    dexcomTrendKeys: {
-        "None": 0,
-        "DoubleUp": 1,
-        "SingleUp": 2,
-        "FortyFiveUp": 3,
-        "Flat": 4,
-        "FortyFiveDown": 5,
-        "SingleDown": 6,
-        "DoubleDown": 7,
-        "NotComputable": 8,
-        "RateOutOfRange": 9,
+/****** GLOBAL VARIABLES ******/
+const APP_ID = "d89443d2-327c-4a6f-89e5-496bbb0317db"
+
+const URL_BASE = "https://share2.dexcom.com/ShareWebServices/Services"
+const URL_BASE_OUS = "https://shareous1.dexcom.com/ShareWebServices/Services"
+
+const ENDPOINT_LOGIN = "/General/LoginPublisherAccountById"
+const ENDPOINT_AUTHENTICATE = "/General/AuthenticatePublisherAccount"
+const ENDPOINT_GLUCOSE_READINGS = "/Publisher/ReadPublisherLatestGlucoseValues"
+
+const DEFAULT_SESSION_ID = "00000000-0000-0000-0000-000000000000"
+
+const TREND_DESCRIPTIONS = {
+    None: { name: "None", desc: "", arrow: "" },
+    DoubleUp: { name: "DoubleUp", desc: "rising quickly", arrow: "↑↑" },
+    SingleUp: { name: "SingleUp", desc: "rising", arrow: "↑" },
+    FortyFiveUp: { name: "FortyFiveUp", desc: "rising slightly", arrow: "↗" },
+    Flat: { name: "Flat", desc: "steady", arrow: "→" },
+    FortyFiveDown: {
+        name: "FortyFiveDown",
+        desc: "falling slightly",
+        arrow: "↘",
     },
-    // Trend descriptions:
-    dexcomTrendDescriptions: [
-        "",
-        "rising quickly",
-        "rising",
-        "rising slightly",
-        "steady",
-        "falling slightly",
-        "falling",
-        "falling quickly",
-        "unable to determine trend",
-        "trend unavailable",
-    ],
-    dexcomTrendArrows: ["", "↑↑", "↑", "↗", "→", "↘", "↓", "↓↓", "?", "-"],
-    // Default session ID:
-    defaultSessionId: "00000000-0000-0000-0000-000000000000",
-    // Conversion factors:
-    mmolLConvertionFactor: 0.0555, // (mmol/L) = (mg/dl) * 0.0555
+    SingleDown: { name: "SingleDown", desc: "falling", arrow: "↓" },
+    DoubleDown: { name: "DoubleDown", desc: "falling quickly", arrow: "↓↓" },
+    NotComputable: {
+        name: "NotComputable",
+        desc: "unable to determine trend",
+        arrow: "?",
+    },
+    RateOutOfRange: {
+        name: "RateOutOfRange",
+        desc: "trend unavailable",
+        arrow: "-",
+    },
 }
 
-class GlucoseReading {
-    constructor(reading) {
-        this._reading = reading;
+const MMOLL_TO_MGDL_CONVERTION_FACTOR = 0.0555 // (mmol/L) = (mg/dl) * 0.0555
 
-        this.value = reading.Value;
-
-        this._trend = reading.Trend;
-        this._trendKey = vars.dexcomTrendKeys[this._trend];
-        this.trendDescription = vars.dexcomTrendDescriptions[this._trendKey];
-        this.trendArrow = vars.dexcomTrendArrows[this._trendKey];
-
-        this.time = new Date(parseInt(reading.WT.replace("Date(", "").replace(")", "")));
+class Client {
+    constructor(OutOfUS = false) {
+        this._baseUrl = OutOfUS ? URL_BASE_OUS : URL_BASE
     }
 
-    get mgdl() {
-        return this.value;
-    }
-
-    get mmoL() {
-        return Math.round(this.value * vars.mmolLConvertionFactor, 1);
-    }
-
-    get trend() {
-        return {
-            description: this.trendDescription,
-            arrows: this.trendArrow,
-        }
-    }
-}
-
-class Dexcom {
-    static Reading = GlucoseReading;
-
-    constructor(username, password, ous=false) {
-        if (!username || !password) {
-            throw new Error('Username and password are required');
-        }
-        this.username = username;
-        this.password = password;
-        this.ous = ous;
-        this.sessionId = null;
-
-        this._baseUrl = ous ? vars.dexcomBaseUrlOus : vars.dexcomBaseUrl;
-        this._baseHeaders = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-        }
-
-        this.ready = this.create_session()
-    }
-
-    _check_session_id() {
-        if (!this.sessionId) {
-            throw new Error('Session ID is not set');
-        }
-        if (this.sessionId == vars.defaultSessionId) {
-            throw new Error('Session ID is invalid');
-        }
-    }
-
-    _request(url, method='get', data=null) {
-        return fetch(this._baseUrl + url, {
-            method: method,
-            headers: this._baseHeaders,
-            body: data ? JSON.stringify(data) : null,
+    _request(endpoint, data) {
+        return fetch(this._baseUrl + endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            body: JSON.stringify(data),
         }).then(response => response.json())
     }
 
-    async create_session() {
-        let postData = {
-            accountName: this.username,
-            password: this.password,
-            applicationId: vars.dexcomApplicationId
+    _authenticate(username, password) {
+        return this._request(ENDPOINT_AUTHENTICATE, {
+            accountName: username,
+            password,
+            applicationId: APP_ID,
+        })
+    }
+    _login(accountId, password) {
+        return this._request(ENDPOINT_LOGIN, {
+            accountId,
+            password,
+            applicationId: APP_ID,
+        })
+    }
+
+    /**
+     * Creates a Dexcom session using the given Dexcom Share username and password.
+     * @param {string} username
+     * @param {string} password
+     * @returns {Promise} Promise that resolves on login success
+     * @throws Error if login fails
+     */
+    async login(username, password) {
+        try {
+            const accountId = await this._authenticate(username, password)
+            this.sessionId = await this._login(accountId, password)
+        } catch (e) {
+            throw new Error("Error creating session")
         }
+
+        if (this.sessionId == DEFAULT_SESSION_ID)
+            throw new Error("Invalid session")
+    }
+
+    /**
+     * Fetches multiple glucose readings from the Dexcom Share service. Requires login() first.
+     * @param {number} maxAge The maximum age of readings to fetch, in minutes
+     * @param {*} maxCount The maximum number of readings to fetch
+     * @returns Promise that resolves with an array of glucose readings: `{ trend: { name: string, desc: string, arrow: string }, mgdl: number, mmol: number, time: Date }`
+     * @throws Error if not logged in, arguments are invalid, or fetch fails
+     */
+    async fetchReadings(maxAge = 1440, maxCount = 288) {
+        if (!this.sessionId) throw new Error("Not yet logged in")
+
+        if (maxAge < 1 || maxAge > 1440)
+            throw new Error("Minutes must be between 1 and 1440")
+        if (maxCount < 1 || maxCount > 288)
+            throw new Error("Max count must be between 1 and 288")
 
         try {
-            let accountId = await this._request(vars.dexcomAuthenticateEndpoint, 'post', postData);
-            let sessionId = await this._request(vars.dexcomLoginEndpoint, 'post', {
-                accountId,
-                password: this.password,
-                applicationId: vars.dexcomApplicationId
-            });
-            this.sessionId = sessionId;
-            return
+            const readings = await this._request(ENDPOINT_GLUCOSE_READINGS, {
+                sessionId: this.sessionId,
+                minutes: maxAge,
+                maxCount,
+            })
+            return readings.map(reading =>
+                this._profetchLastReadingcessReadings(reading)
+            )
         } catch (e) {
-            console.error(e)
-            throw new Error('Failed to create session');
+            throw new Error("Error fetching glucose readings")
         }
     }
 
-    async getGlucoseReadings(minutes=1440, maxCount=288) {
-        this._check_session_id()
-        if (minutes > 1440 || minutes < 1) {
-            throw new Error('Minutes must be between 1 and 1440');
-        }
-        if (maxCount > 288 || maxCount < 1) {
-            throw new Error('Max count must be between 1 and 288');
-        }
-        let postData = {
-            sessionId: this.sessionId,
-            minutes: minutes,
-            maxCount: maxCount
-        }
-        try {
-            let data = await this._request(vars.dexcomGlucoseReadingsEndpoint, 'post', postData)
-            let readings = data.map(reading => new GlucoseReading(reading))
-            return readings
-        } catch (e) {
-            console.error(e)
-            throw new Error('Failed to get glucose readings');
+    _processReadings(reading) {
+        return {
+            trend: TREND_DESCRIPTIONS[reading.Trend],
+            mgdl: reading.Value,
+            mmol:
+                Math.round(
+                    reading.Value * MMOLL_TO_MGDL_CONVERTION_FACTOR * 10
+                ) / 10,
+            time: new Date(
+                parseInt(reading.WT.replace("Date(", "").replace(")", ""))
+            ),
         }
     }
 
-    // Latest reading in the last 10 minutes (current)
-    async getCurrentGlucoseReading() {
-        let glucoseReadings = await this.getGlucoseReadings(10, 1)
-        let reading = glucoseReadings[0]
-        if (!reading) {
-            throw new Error('No glucose readings found');
-        }
-        return reading
+    /**
+     * Fetches the most recent glucose reading within the last day. Requires login() first.
+     * @returns {Promise} Promise that resolves with the most recent glucose reading, or undefined if no readings are available
+     * @throws Error if not logged in
+     */
+    fetchLastReading() {
+        return this.fetchReadings(1440, 1).then(readings => readings[0])
     }
-
-    // Latest reading in the last 24 hours (24h)
-    async getLatestGlucoseReading() {
-        let glucoseReadings = await this.getGlucoseReadings(1440, 1)
-        let reading = glucoseReadings[0]
-        if (!reading) {
-            throw new Error('No glucose readings found');
-        }
-        return reading
-    }
-
 }
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    // Export the Dexcom class when used as a node module
-    module.exports = Dexcom;
+// Node.js support
+if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
+    module.exports = Client
 }
