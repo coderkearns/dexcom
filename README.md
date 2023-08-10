@@ -1,6 +1,6 @@
 # dexcom
 
-A simple javascript library for reading glucose data from the Dexcom Share API.
+A simple non-official javascript library for reading glucose data from the Dexcom Share API.
 ## Installation
 
 ### Browser
