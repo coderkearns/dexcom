@@ -11,18 +11,26 @@ const ENDPOINT_GLUCOSE_READINGS = "/Publisher/ReadPublisherLatestGlucoseValues"
 const DEFAULT_SESSION_ID = "00000000-0000-0000-0000-000000000000"
 
 const TREND_DESCRIPTIONS = {
-    None: { name: "None", desc: "", arrow: "" },
-    DoubleUp: { name: "DoubleUp", desc: "rising quickly", arrow: "↑↑" },
-    SingleUp: { name: "SingleUp", desc: "rising", arrow: "↑" },
-    FortyFiveUp: { name: "FortyFiveUp", desc: "rising slightly", arrow: "↗" },
-    Flat: { name: "Flat", desc: "steady", arrow: "→" },
+    None: { name: "None", desc: "", arrow: "-" },
+    DoubleUp: { name: "DoubleUp", desc: "rising quickly", arrow: "\u2B85" },
+    SingleUp: { name: "SingleUp", desc: "rising", arrow: "\u2191" },
+    FortyFiveUp: {
+        name: "FortyFiveUp",
+        desc: "rising slightly",
+        arrow: "\u2197",
+    },
+    Flat: { name: "Flat", desc: "steady", arrow: "\u2192" },
     FortyFiveDown: {
         name: "FortyFiveDown",
         desc: "falling slightly",
-        arrow: "↘",
+        arrow: "\u2198",
     },
-    SingleDown: { name: "SingleDown", desc: "falling", arrow: "↓" },
-    DoubleDown: { name: "DoubleDown", desc: "falling quickly", arrow: "↓↓" },
+    SingleDown: { name: "SingleDown", desc: "falling", arrow: "\u2193" },
+    DoubleDown: {
+        name: "DoubleDown",
+        desc: "falling quickly",
+        arrow: "\u2B87",
+    },
     NotComputable: {
         name: "NotComputable",
         desc: "unable to determine trend",
