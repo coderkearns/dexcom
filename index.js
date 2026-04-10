@@ -94,7 +94,7 @@ const Client = (function () {
                 throw new Error("Error creating session")
             }
 
-            if (this.sessionId == DEFAULT_SESSION_ID)
+            if (this.sessionId == DEFAULT_SESSION_ID || typeof this.sessionId !== "string")
                 throw new Error("Invalid session")
         }
 
